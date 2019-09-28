@@ -108,8 +108,8 @@ class StandoffDoc:
         def render_attribs(attribs):
             if not attribs:
                 return ''
-            return (' ' +
-                    ' '.join(f'{self.proc_ns(key)}="{value}"' for key, value in attribs.items()))
+            return (' ' + ' '.join(f'{self.proc_ns(key)}="{xml_safe(value)}"'
+                                   for key, value in attribs.items()))
 
         def render_tags(idx):
             all_standoffs = (
