@@ -19,6 +19,23 @@ get_root_element.register(etree._Element, lambda xml_input: xml_input)
 get_root_element.register(etree._ElementTree, lambda xml_input: xml_input.getroot())
 
 
+def xml_safe(text):
+    if text is None:
+        return ''
+
+    replacements = (
+        ('&', '&amp;'),
+        ('"', '&quot;'),
+        ("'", '&apos;'),
+        ('<', '&lt;'),
+        ('>', '&gt;'),
+    )
+    for find, replace in replacements:
+        text = text.replace(find, replace)
+
+    return text
+
+
 class StandoffDoc:
 
     def __init__(self, xml_input):
@@ -30,8 +47,8 @@ class StandoffDoc:
         self.reverse_nsmap = {value: key for key, value in self.nsmap.items()}
         self.xml_to_standoff()
 
-        from pprint import pprint
-        pprint(self.standoffs)
+        # from pprint import pprint
+        # pprint(self.standoffs)
 
     def proc_ns(self, tag):
         if '}' not in tag:
@@ -58,14 +75,14 @@ class StandoffDoc:
                 'depth': depth
             }
 
-            plain_text.extend(element.text or '')
+            plain_text.extend(xml_safe(element.text))
 
             for subelement in element:
                 parse_element(subelement, plain_text, depth=depth + 1)
 
             props['end'] = len(plain_text)
 
-            plain_text.extend(element.tail or '')
+            plain_text.extend(xml_safe(element.tail))
             depth -= 1
 
             self.standoffs.append(props)
@@ -143,9 +160,9 @@ class StandoffDoc:
 
             # all_standoffs.sort(key=lambda standoff: self.standoffs.index(standoff))
 
-            if all_standoffs:
-                from pprint import pprint
-                pprint(all_standoffs)
+            # if all_standoffs:
+            #     from pprint import pprint
+            #     pprint(all_standoffs)
             ret = []
             for standoff in all_standoffs:
                 if standoff["begin"] == idx and standoff["end"] == idx:
@@ -166,8 +183,8 @@ class StandoffDoc:
 
         out_xml += render_closing_tags(-1)
 
-        return out_xml
-        # return etree.tostring(etree.fromstring(out_xml), pretty_print=True, encoding='unicode')
+        # return out_xml
+        return etree.tostring(etree.fromstring(out_xml), pretty_print=True, encoding='unicode')
 
     def add_annotation(self, begin, end, tag, depth, attribute, unique=True):
         """add a standoff annotation.
