@@ -72,7 +72,8 @@ class StandoffDoc:
                 'begin': len(plain_text),
                 'tag': self.proc_ns(element.tag),
                 'attrib': element.attrib,
-                'depth': depth
+                'depth': depth,
+                'begin_sort': len([_ for _ in self.standoffs if _['begin'] == len(plain_text)])
             }
 
             plain_text.extend(xml_safe(element.text))
@@ -81,6 +82,7 @@ class StandoffDoc:
                 parse_element(subelement, plain_text, depth=depth + 1)
 
             props['end'] = len(plain_text)
+            props['end_sort'] = len([_ for _ in self.standoffs if _['end'] == len(plain_text)])
 
             plain_text.extend(xml_safe(element.tail))
             depth -= 1
@@ -158,6 +160,7 @@ class StandoffDoc:
             # except relying on the order in self.standoffs will cause a problem when tags are
             #  inserted (or removed...)
 
+            all_standoffs.sort(key=lambda standoff: standoff.get('begin_sort', 0) if standoff['begin'] == idx else standoff.get('end_sort', 0))
             # all_standoffs.sort(key=lambda standoff: self.standoffs.index(standoff))
 
             # if all_standoffs:
