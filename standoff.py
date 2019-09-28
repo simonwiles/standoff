@@ -47,9 +47,6 @@ class StandoffDoc:
         self.reverse_nsmap = {value: key for key, value in self.nsmap.items()}
         self.xml_to_standoff()
 
-        # from pprint import pprint
-        # pprint(self.standoffs)
-
     def proc_ns(self, tag):
         if '}' not in tag:
             return tag
@@ -94,12 +91,6 @@ class StandoffDoc:
         self.plain_text = ''.join(plain_text)
 
     def to_xml(self):
-        """create a standoff representation from an lxml tree.
-
-        returns:
-        string -- the string containing the xml
-        """
-
         # for every index in plain_text (plus one for the end), we need a list of elements
         #  that begin at that index, and a list of those that end there.
         standoff_begin_lookup = [[] for _ in self.plain_text] + [[]]
@@ -114,36 +105,6 @@ class StandoffDoc:
             standoff_begin_lookup[standoff['begin']] += [standoff]
             standoff_end_lookup[standoff['end']] += [standoff]
 
-        def render_empty_tags(idx):
-            sorted_empty = sorted(standoff_empty_lookup[idx], key=itemgetter('depth'))
-            return ''.join(
-                f'<{standoff["tag"] + render_attribs(standoff["attrib"])}/>'
-                for standoff in sorted_empty)
-
-        def render_opening_tags(idx):
-            # sorted_begin = sorted(
-            #     sorted(standoff_begin_lookup[idx], key=itemgetter('depth')),
-            #     key=lambda standoff: -(standoff['end'] - standoff['begin'])
-            # )
-            sorted_begin = sorted(standoff_begin_lookup[idx], key=itemgetter('depth'))
-            return ''.join(
-                f'<{standoff["tag"] + render_attribs(standoff["attrib"])}>'
-                for standoff in sorted_begin)
-
-
-        def render_closing_tags(idx):
-            # sorted_closing_tags = sorted(
-            #     sorted(
-            #         standoff_end_lookup[idx],
-            #         key=lambda standoff: -(standoff['end'] - standoff['begin'])),
-            #     key=itemgetter('depth'), reverse=True)
-            sorted_closing_tags = sorted(
-                standoff_end_lookup[idx],
-                key=itemgetter('depth'), reverse=True
-            )
-            return ''.join(f'</{standoff["tag"]}>' for standoff in sorted_closing_tags)
-
-
         def render_attribs(attribs):
             if not attribs:
                 return ''
@@ -156,16 +117,8 @@ class StandoffDoc:
                 sorted(standoff_empty_lookup[idx] + standoff_begin_lookup[idx], key=itemgetter('depth'))
             )
 
-            # if an empty tag follows a closing tag _and_ has a greater depth...
-            # except relying on the order in self.standoffs will cause a problem when tags are
-            #  inserted (or removed...)
-
             all_standoffs.sort(key=lambda standoff: standoff.get('begin_sort', 0) if standoff['begin'] == idx else standoff.get('end_sort', 0))
-            # all_standoffs.sort(key=lambda standoff: self.standoffs.index(standoff))
 
-            # if all_standoffs:
-            #     from pprint import pprint
-            #     pprint(all_standoffs)
             ret = []
             for standoff in all_standoffs:
                 if standoff["begin"] == idx and standoff["end"] == idx:
@@ -174,17 +127,16 @@ class StandoffDoc:
                 elif standoff["begin"] == idx:
                     # opening
                     ret.append(f'<{standoff["tag"] + render_attribs(standoff["attrib"])}>')
-                elif standoff["end"] == idx:
-                    # closing
+                else:
+                    # closing -- includes idx == -1 case
                     ret.append(f'</{standoff["tag"]}>')
             return ''.join(ret)
 
         out_xml = ''.join(
-            # (render_closing_tags(idx) + render_empty_tags(idx) + render_opening_tags(idx) + char)
             (render_tags(idx) + char)
             for idx, char in enumerate(self.plain_text))
 
-        out_xml += render_closing_tags(-1)
+        out_xml += render_tags(-1)
 
         # return out_xml
         return etree.tostring(etree.fromstring(out_xml), pretty_print=True, encoding='unicode')
