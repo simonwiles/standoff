@@ -119,6 +119,14 @@ class StandoffDoc:
 
             all_standoffs.sort(key=lambda standoff: standoff.get('begin_sort', 0) if standoff['begin'] == idx else standoff.get('end_sort', 0))
 
+            if idx == 0:
+                # add namespaces as attributes to the root element
+                root_standoff = all_standoffs[0]
+                root_standoff['attrib'] = {k: v for k, v in root_standoff['attrib'].items()}
+                root_standoff['attrib'].update(
+                    {'xmlns' + (f':{key}' if key else ''): value
+                     for key, value in self.nsmap.items()})
+
             ret = []
             for standoff in all_standoffs:
                 if standoff["begin"] == idx and standoff["end"] == idx:
