@@ -65,12 +65,13 @@ class StandoffDoc:
         plain_text = []
 
         def parse_element(element, plain_text, depth=0):
+            offset = len(plain_text)
             props = {
-                'begin': len(plain_text),
+                'begin': offset,
                 'tag': self.proc_ns(element.tag),
                 'attrib': element.attrib,
                 'depth': depth,
-                'begin_sort': len([_ for _ in self.standoffs if _['begin'] == len(plain_text)])
+                'begin_sort': len([_ for _ in self.standoffs if _['begin'] == offset])
             }
 
             plain_text.extend(xml_safe(element.text))
@@ -91,8 +92,9 @@ class StandoffDoc:
                     continue
                 parse_element(subelement, plain_text, depth=depth + 1)
 
-            props['end'] = len(plain_text)
-            props['end_sort'] = len([_ for _ in self.standoffs if _['end'] == len(plain_text)])
+            offset = len(plain_text)
+            props['end'] = offset
+            props['end_sort'] = len([_ for _ in self.standoffs if _['end'] == offset])
 
             plain_text.extend(xml_safe(element.tail))
             depth -= 1
@@ -137,10 +139,10 @@ class StandoffDoc:
             if idx == 0:
                 # add namespaces as attributes to the root element
                 root_standoff = all_standoffs[0]
-                root_standoff['attrib'] = {k: v for k, v in root_standoff['attrib'].items()}
-                root_standoff['attrib'].update(
-                    {'xmlns' + (f':{key}' if key else ''): value
-                     for key, value in self.nsmap.items()})
+                root_standoff['attrib'] = {
+                    **root_standoff['attrib'],
+                    **{'xmlns' + (f':{key}' if key else ''): value
+                       for key, value in self.nsmap.items()}}
 
             ret = []
             for standoff in all_standoffs:
