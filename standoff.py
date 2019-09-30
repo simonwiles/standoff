@@ -93,17 +93,17 @@ class StandoffDoc:
     def to_xml(self):
         # for every index in plain_text (plus one for the end), we need a list of elements
         #  that begin at that index, and a list of those that end there.
-        standoff_begin_lookup = [[] for _ in self.plain_text] + [[]]
-        standoff_end_lookup = [[] for _ in self.plain_text] + [[]]
-        standoff_empty_lookup = [[] for _ in self.plain_text] + [[]]
+        opening_lookup = [[] for _ in self.plain_text] + [[]]
+        closing_lookup = [[] for _ in self.plain_text] + [[]]
+        empty_lookup = [[] for _ in self.plain_text] + [[]]
 
         for standoff in self.standoffs:
             if standoff['begin'] == standoff['end']:
-                standoff_empty_lookup[standoff['begin']] += [standoff]
+                empty_lookup[standoff['begin']] += [standoff]
                 continue
 
-            standoff_begin_lookup[standoff['begin']] += [standoff]
-            standoff_end_lookup[standoff['end']] += [standoff]
+            opening_lookup[standoff['begin']] += [standoff]
+            closing_lookup[standoff['end']] += [standoff]
 
         def render_attribs(attribs):
             if not attribs:
@@ -113,11 +113,13 @@ class StandoffDoc:
 
         def render_tags(idx):
             all_standoffs = (
-                sorted(standoff_end_lookup[idx], key=itemgetter('depth'), reverse=True) +
-                sorted(standoff_empty_lookup[idx] + standoff_begin_lookup[idx], key=itemgetter('depth'))
+                sorted(closing_lookup[idx], key=itemgetter('depth'), reverse=True) +
+                sorted(empty_lookup[idx] + opening_lookup[idx], key=itemgetter('depth'))
             )
 
-            all_standoffs.sort(key=lambda standoff: standoff.get('begin_sort', 0) if standoff['begin'] == idx else standoff.get('end_sort', 0))
+            all_standoffs.sort(key=lambda standoff:
+                               standoff.get('begin_sort', 0)
+                               if standoff['begin'] == idx else standoff.get('end_sort', 0))
 
             if idx == 0:
                 # add namespaces as attributes to the root element
