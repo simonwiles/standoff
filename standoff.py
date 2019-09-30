@@ -76,6 +76,19 @@ class StandoffDoc:
             plain_text.extend(xml_safe(element.text))
 
             for subelement in element:
+                if subelement.tag == etree.Comment:
+                    offset = len(plain_text)
+                    self.standoffs.append({
+                        'begin': offset,
+                        'tag': etree.Comment,
+                        'comment_text': subelement.text,
+                        'depth': depth,
+                        'begin_sort': len([_ for _ in self.standoffs if _['begin'] == offset]),
+                        'end': offset,
+                        'end_sort': len([_ for _ in self.standoffs if _['end'] == offset])
+                    })
+                    plain_text.extend(xml_safe(subelement.tail))
+                    continue
                 parse_element(subelement, plain_text, depth=depth + 1)
 
             props['end'] = len(plain_text)
@@ -131,14 +144,16 @@ class StandoffDoc:
 
             ret = []
             for standoff in all_standoffs:
-                if standoff["begin"] == idx and standoff["end"] == idx:
+                if standoff['tag'] == etree.Comment:
+                    ret.append(f'<!--{standoff["comment_text"]}-->')
+                elif standoff["begin"] == idx and standoff['end'] == idx:
                     # self-closing
                     ret.append(f'<{standoff["tag"] + render_attribs(standoff["attrib"])}/>')
                 elif standoff["begin"] == idx:
                     # opening
                     ret.append(f'<{standoff["tag"] + render_attribs(standoff["attrib"])}>')
                 else:
-                    # closing -- includes idx == -1 case
+                    # closing
                     ret.append(f'</{standoff["tag"]}>')
             return ''.join(ret)
 
